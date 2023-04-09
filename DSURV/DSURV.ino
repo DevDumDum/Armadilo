@@ -14,6 +14,9 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 #define PH 3.14
 //const int ldrPin = A2; // analog pin A2
+const int pumpPower = 5; // pump power transistors
+const int pumpSwitch = 6; // pump switch relay
+
 float L1 = 10.5; //arm length 1
 float L2 = 9.8;  //arm length 2
 
@@ -35,24 +38,29 @@ String tempInput = "";
 void setup() {
   Serial.begin(9600);
 
+  pinMode(pumpPower, OUTPUT);
+  pinMode(pumpSwitch, OUTPUT);
+  digitalWrite(pumpPower, LOW);
+  digitalWrite(pumpSwitch, LOW);
+
   pwm.begin();
   pwm.setPWMFreq(60);  // Analog servos run at ~60 Hz updates
   //pinMode(ldrPin, INPUT);
   //yield();
-  pwm.setPWM(0, 0, angleToPulse(0) );
+  pwm.setPWM(0, 0, angleToPulse(90) );
   pwm.setPWM(1, 0, angleToPulse(90) );
   pwm.setPWM(2, 0, angleToPulse(90) );
   pwm.setPWM(3, 0, angleToPulse(90) );
 }
 
-void moveElbows(float b, float a1, float a2){
+void moveElbows(float b, float a1, float a2, float a3){
   if(b < s3MinLimit){ b=s3MinLimit;}
   if(a1 < s2MinLimit){ a1=s2MinLimit;}// if(a2 < s2MinLimit){ a2=s2MinLimit;}
   if(a2 < s1MinLimit){ a2=s1MinLimit;}// if(a1 < s1MinLimit){ a1=s1MinLimit;}
   pwm.setPWM(3, 0, angleToPulse(b) );
   pwm.setPWM(2, 0, angleToPulse(a1) );
   pwm.setPWM(1, 0, angleToPulse(a2) );
-  pwm.setPWM(0, 0, angleToPulse(0) );
+  pwm.setPWM(0, 0, angleToPulse(a3) );
 }
 
 void toInverseK(float x, float y, float z) {
@@ -86,6 +94,7 @@ void toInverseK(float x, float y, float z) {
   float angle_E =(unsigned short)((new_thetaE*180)/PH);
   float angle_S =(unsigned short)((new_thetaS*180)/PH);
   
+  float angle_F = (270 - angle_E) - angle_S;
 
   Serial.print("Base: ");
   Serial.print(b);
@@ -93,11 +102,14 @@ void toInverseK(float x, float y, float z) {
   Serial.print(angle_S);
   Serial.print(" = A2: ");
   Serial.println(angle_E);
+
+  Serial.print(" = A3: ");
+  Serial.println(angle_F);
+  
   Serial.print(" = H: ");
   Serial.print(h);
-  moveElbows(b, angle_S, angle_E);
+  moveElbows(b, angle_S, angle_E, angle_F);
 }
-
 
 void angle(String command){
   String xyz[3];
@@ -143,6 +155,23 @@ void motor (String command){
   digitalWrite(motorA2, LOW);
   digitalWrite(motorB1, LOW);
   digitalWrite(motorB2, LOW);
+}
+
+void pump (String command){
+  char pump = command[0];
+  command.remove(0,2);
+  Serial.println(command);
+
+  if(pump == 'i'){
+    digitalWrite(pumpSwitch, HIGH);
+  } else {
+    digitalWrite(pumpSwitch, LOW);
+  }
+  
+  digitalWrite(pumpPower, HIGH);
+  int tempC = atoi(command.c_str());
+  delay(tempC);
+  digitalWrite(pumpPower, LOW);
 }
 
 void loop() {
@@ -202,7 +231,49 @@ void loop() {
       if(command[0] == 'c'){
         switch(command[1]){
           case '1': command.remove(0,3);angle(command); break;
-          case '2': command.remove(0,3); Serial.print("@");motor(command); break;
+          case '2': command.remove(0,3);motor(command); break;
+          case '3': command.remove(0,3);pump(command); break;
+          case '4':
+            command.remove(0,3);
+            pump("i,2000>");
+            moveElbows(90,70,90,15);
+            delay(500);
+            moveElbows(90,60,60,15);
+            pump("i,4000>");
+            moveElbows(90,50,70,30);
+            delay(1000);
+            pump("d,3000>");
+            moveElbows(90,50,55,15);
+            pump("d,3000>");
+            moveElbows(90,90,90,0);
+            pump("d,3000>");
+            break;
+          case '5':
+            command.remove(0,3);
+            String bxyz[4];
+            int index = 0;
+            for(int t=0; t < command.length(); t++){
+              if(command[t] != ','){
+                bxyz[index] += command[t];
+              }else{
+                index++;
+              }
+            }
+            float b = bxyz[0].toFloat();
+            float x = bxyz[1].toFloat();
+            float y =  bxyz[2].toFloat();
+            float z = bxyz[3].toFloat();
+            Serial.print("Base: ");
+            Serial.print(b);
+            Serial.print(" = A1: ");
+            Serial.print(x);
+            Serial.print(" = A2: ");
+            Serial.println(y);
+
+            Serial.print(" = A3: ");
+            Serial.println(z);
+            moveElbows(b,x,y,z);
+            break;
         }
       }else{
         Serial.print(command[0]);
