@@ -7,10 +7,10 @@
 uint8_t servonum = 0;//servo # counter
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
-#define motorA1 3
-#define motorA2 9
-#define motorB1 10
-#define motorB2 11
+#define motorA1 5
+#define motorA2 6
+#define motorB1 7
+#define motorB2 8
 
 #define PH 3.14
 //const int ldrPin = A2; // analog pin A2
@@ -157,6 +157,16 @@ void motor (String command){
   digitalWrite(motorB2, LOW);
 }
 
+void pumpOn(){
+  digitalWrite(pumpSwitch, LOW);
+  digitalWrite(pumpPower, HIGH);
+}
+
+void pumpOff(){
+  digitalWrite(pumpSwitch, LOW);
+  digitalWrite(pumpPower, LOW);
+}
+
 void pump (String command){
   char pump = command[0];
   command.remove(0,2);
@@ -249,30 +259,40 @@ void loop() {
             pump("d,3000>");
             break;
           case '5':
-            command.remove(0,3);
-            String bxyz[4];
-            int index = 0;
-            for(int t=0; t < command.length(); t++){
-              if(command[t] != ','){
-                bxyz[index] += command[t];
-              }else{
-                index++;
-              }
-            }
-            float b = bxyz[0].toFloat();
-            float x = bxyz[1].toFloat();
-            float y =  bxyz[2].toFloat();
-            float z = bxyz[3].toFloat();
-            Serial.print("Base: ");
-            Serial.print(b);
-            Serial.print(" = A1: ");
-            Serial.print(x);
-            Serial.print(" = A2: ");
-            Serial.println(y);
+            Serial.println(command);
+            pumpOn();
+            // command.remove(0,3);
+            // String bxyz[4];
+            // int index = 0;
+            // for(int t=0; t < command.length(); t++){
+            //   if(command[t] != ','){
+            //     bxyz[index] += command[t];
+            //   }else{
+            //     index++;
+            //   }
+            // }
+            // float b = bxyz[0].toFloat();
+            // float x = bxyz[1].toFloat();
+            // float y =  bxyz[2].toFloat();
+            // float z = bxyz[3].toFloat();
+            // Serial.print("Base: ");
+            // Serial.print(b);
+            // Serial.print(" = A1: ");
+            // Serial.print(x);
+            // Serial.print(" = A2: ");
+            // Serial.println(y);
 
-            Serial.print(" = A3: ");
-            Serial.println(z);
-            moveElbows(b,x,y,z);
+            // Serial.print(" = A3: ");
+            // Serial.println(z);
+            // moveElbows(b,x,y,z);
+            break;
+          case '6':
+            Serial.println(command);
+            pumpOn();
+            break;
+          case '7':
+            Serial.println(command);
+            pumpOff();
             break;
         }
       }else{
